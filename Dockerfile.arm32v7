@@ -7,23 +7,18 @@ RUN apt update \
  && cd /apt-cacher-ng \
  && ./build.sh
 
-FROM arm32v7/busybox:glibc
-
-COPY --from=apt-cacher-ng-builder /lib/arm-linux-gnueabihf/libz.so.1 /lib/libz.so.1
-COPY --from=apt-cacher-ng-builder /lib/arm-linux-gnueabihf/libbz2.so.1.0 /lib/libbz2.so.1.0
-COPY --from=apt-cacher-ng-builder /lib/arm-linux-gnueabihf/liblzma.so.5 /lib/liblzma.so.5
-COPY --from=apt-cacher-ng-builder /lib/arm-linux-gnueabihf/libgcc_s.so.1 /lib/libgcc_s.so.1
-COPY --from=apt-cacher-ng-builder /lib/arm-linux-gnueabihf/libdl.so.2 /lib/libdl.so.2
-COPY --from=apt-cacher-ng-builder /lib/arm-linux-gnueabihf/libwrap.so.0 /lib/libwrap.so.0
-COPY --from=apt-cacher-ng-builder /usr/lib/arm-linux-gnueabihf/libssl.so.1.1 /lib/libssl.so.1.1
-COPY --from=apt-cacher-ng-builder /usr/lib/arm-linux-gnueabihf/libcrypto.so.1.1 /lib/libcrypto.so.1.1
-COPY --from=apt-cacher-ng-builder /usr/lib/arm-linux-gnueabihf/libstdc++.so.6 /lib/libstdc++.so.6
+FROM arm32v7/debian:stretch-slim
 
 COPY --from=apt-cacher-ng-builder /apt-cacher-ng/builddir/apt-cacher-ng /usr/sbin/apt-cacher-ng
 COPY --from=apt-cacher-ng-builder /apt-cacher-ng/conf /etc/apt-cacher-ng
 
-RUN addgroup -g 202 -S apt-cacher-ng \
- && adduser -G apt-cacher-ng -s /bin/false -S -D -H -u 202 apt-cacher-ng \
+RUN apt update \
+ && apt -y dist-upgrade \
+ && apt -y install zlib1g libssl1.1 libbz2-1.0 libfuse2 liblzma5 libwrap0 \
+ && apt -y clean \
+ && rm -r /var/lib/apt/lists/* \
+ && addgroup --gid 202 --system apt-cacher-ng \
+ && adduser --system --ingroup apt-cacher-ng --shell /bin/false --no-create-home --disabled-login --disabled-password --uid 202 apt-cacher-ng \
  && mkdir -p /var/log/apt-cacher-ng /var/cache/apt-cacher-ng \
  && mv /etc/apt-cacher-ng/acng.conf.in /etc/apt-cacher-ng/acng.conf \
  && chown -R apt-cacher-ng:apt-cacher-ng /etc/apt-cacher-ng /var/log/apt-cacher-ng /var/cache/apt-cacher-ng
